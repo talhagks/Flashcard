@@ -1,1 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kelime Kartlarım</title>
+<style>
+:root{
+  --bg:#f5f6fa; --card:#ffffff; --text:#1a1a2e; --sub:#666;
+  --accent:#4f46e5; --accent2:#818cf8; --danger:#e11d48; --border:#e5e7eb;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15151f; --card:#1f1f2e; --text:#f0f0f5; --sub:#9a9aad; --border:#33334a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15151f; --card:#1f1f2e; --text:#f0f0f5; --sub:#9a9aad; --border:#33334a;
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+body{
+  margin:0; min-height:100%; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:16px; max-width:520px; margin:0 auto;
+}
+h1{font-size:1.4rem; margin:8px 0 4px; text-align:center;}
+p.sub{color:var(--sub); text-align:center; margin:0 0 20px; font-size:.9rem;}
+.tabs{display:flex; gap:8px; margin-bottom:16px;}
+.tab{
+  flex:1; padding:10px; border-radius:10px; border:1px solid var(--border);
+  background:var(--card); text-align:center; cursor:pointer; font-weight:600; font-size:.9rem;
+}
+.tab.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+.view{display:none;}
+.view.active{display:block;}
+
+/* Add form */
+.field{margin-bottom:12px;}
+label{display:block; font-size:.85rem; color:var(--sub); margin-bottom:4px;}
+input, textarea{
+  width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+  background:var(--card); color:var(--text); font-size:1rem; font-family:inherit;
+}
+textarea{resize:vertical; min-height:50px;}
+button{
+  border:none; border-radius:10px; padding:12px; font-size:1rem; font-weight:600;
+  cursor:pointer; font-family:inherit;
+}
+.btn-primary{background:var(--accent); color:#fff; width:100%;}
+.btn-primary:active{opacity:.85;}
+
+/* List */
+.card-item{
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:12px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:8px;
+}
+.card-item .info{flex:1; min-width:0;}
+.card-item .word{font-weight:700; font-size:1.05rem;}
+.card-item .sent{color:var(--sub); font-size:.85rem; margin-top:2px;}
+.del-btn{background:none; border:none; color:var(--danger); font-size:1.2rem; padding:4px 8px;}
+.empty{text-align:center; color:var(--sub); padding:40px 10px;}
+
+/* Study mode */
+.progress{text-align:center; color:var(--sub); font-size:.85rem; margin-bottom:10px;}
+.flashcard-wrap{perspective:1200px; margin-bottom:16px;}
+.flashcard{
+  background:var(--card); border:1px solid var(--border); border-radius:18px;
+  min-height:220px; padding:28px 20px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center; cursor:pointer;
+  transition:transform .15s ease; gap:10px;
+}
+.flashcard:active{transform:scale(.98);}
+.flashcard .word{font-size:1.6rem; font-weight:800; color:var(--accent);}
+.flashcard .sent{font-size:1.05rem; color:var(--text);}
+.flashcard .tr{font-size:1.15rem; color:var(--text); font-weight:600;}
+.flashcard .hint{font-size:.75rem; color:var(--sub); margin-top:8px;}
+.study-controls{display:flex; gap:8px;}
+.study-controls button{flex:1; background:var(--card); border:1px solid var(--border); color:var(--text);}
+.study-controls .shuffle{background:var(--accent2); color:#fff; border-color:var(--accent2);}
+</style>
+</head>
+<body>
+<h1>🗂️ Kelime Kartlarım</h1>
+<p class="sub">Kelime, örnek cümle ve Türkçesiyle çalış</p>
+
+<div class="tabs">
+  <div class="tab active" data-view="study">Çalış</div>
+  <div class="tab" data-view="add">Kart Ekle</div>
+  <div class="tab" data-view="list">Kartlarım</div>
+</div>
+
+<div class="view active" id="view-study">
+  <div id="studyEmpty" class="empty" style="display:none;">Henüz kart yok. "Kart Ekle" sekmesinden ekle.</div>
+  <div id="studyArea" style="display:none;">
+    <div class="progress" id="progress"></div>
+    <div class="flashcard-wrap">
+      <div class="flashcard" id="flashcard">
+        <div class="word" id="fcWord"></div>
+        <div class="sent" id="fcSent"></div>
+        <div class="tr" id="fcTr" style="display:none;"></div>
+        <div class="hint" id="fcHint">Çevirmek için dokun</div>
+      </div>
+    </div>
+    <div class="study-controls">
+      <button id="prevBtn">‹ Önceki</button>
+      <button class="shuffle" id="shuffleBtn">🔀 Karıştır</button>
+      <button id="nextBtn">Sonraki ›</button>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-add">
+  <div class="field">
+    <label>İngilizce Kelime</label>
+    <input id="inWord" placeholder="happy">
+  </div>
+  <div class="field">
+    <label>Örnek Cümle (İngilizce)</label>
+    <textarea id="inSent" placeholder="I'm so happy"></textarea>
+  </div>
+  <div class="field">
+    <label>Cümlenin Türkçesi</label>
+    <textarea id="inTr" placeholder="Çok mutluyum"></textarea>
+  </div>
+  <button class="btn-primary" id="addBtn">Kartı Ekle</button>
+</div>
+
+<div class="view" id="view-list">
+  <div id="listEmpty" class="empty" style="display:none;">Henüz kart yok.</div>
+  <div id="listArea"></div>
+</div>
+
+<script>
+let cards = [];
+let studyOrder = [];
+let idx = 0;
+let flipped = false;
+
+async function loadCards(){
+  try{
+    const raw = localStorage.getItem('flashcards_v1');
+    cards = raw ? JSON.parse(raw) : [];
+  }catch(e){ cards = []; }
+  studyOrder = cards.map((_,i)=>i);
+  idx = 0;
+  render();
+}
+function saveCards(){
+  try{ localStorage.setItem('flashcards_v1', JSON.stringify(cards)); }catch(e){}
+}
+
+function switchTab(view){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.view===view));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+view));
+  if(view==='study'){ idx = Math.min(idx, Math.max(0, studyOrder.length-1)); flipped=false; renderStudy(); }
+  if(view==='list') renderList();
+}
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>switchTab(t.dataset.view));
+});
+
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  const word = document.getElementById('inWord').value.trim();
+  const sent = document.getElementById('inSent').value.trim();
+  const tr = document.getElementById('inTr').value.trim();
+  if(!word || !sent || !tr){
+    alert('Lütfen kelime, cümle ve Türkçesini gir.');
+    return;
+  }
+  cards.push({word, sent, tr});
+  saveCards();
+  document.getElementById('inWord').value='';
+  document.getElementById('inSent').value='';
+  document.getElementById('inTr').value='';
+  studyOrder = cards.map((_,i)=>i);
+  switchTab('list');
+});
+
+function renderList(){
+  const area = document.getElementById('listArea');
+  const empty = document.getElementById('listEmpty');
+  area.innerHTML='';
+  if(cards.length===0){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  cards.forEach((c,i)=>{
+    const div = document.createElement('div');
+    div.className='card-item';
+    div.innerHTML = `<div class="info"><div class="word">${escapeHtml(c.word)}</div><div class="sent">${escapeHtml(c.sent)} — ${escapeHtml(c.tr)}</div></div>`;
+    const btn = document.createElement('button');
+    btn.className='del-btn'; btn.textContent='✕';
+    btn.addEventListener('click', ()=>{
+      cards.splice(i,1);
+      saveCards();
+      studyOrder = cards.map((_,i)=>i);
+      idx = 0;
+      renderList();
+    });
+    div.appendChild(btn);
+    area.appendChild(div);
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function renderStudy(){
+  const empty = document.getElementById('studyEmpty');
+  const area = document.getElementById('studyArea');
+  if(cards.length===0){ empty.style.display='block'; area.style.display='none'; return; }
+  empty.style.display='none'; area.style.display='block';
+  if(idx>=studyOrder.length) idx=0;
+  const c = cards[studyOrder[idx]];
+  document.getElementById('progress').textContent = (idx+1)+' / '+studyOrder.length;
+  document.getElementById('fcWord').textContent = c.word;
+  document.getElementById('fcSent').textContent = c.sent;
+  document.getElementById('fcTr').textContent = c.tr;
+  document.getElementById('fcTr').style.display = flipped ? 'block' : 'none';
+  document.getElementById('fcHint').textContent = flipped ? 'Tekrar dokun' : 'Çevirmek için dokun';
+}
+
+document.getElementById('flashcard').addEventListener('click', ()=>{
+  flipped = !flipped;
+  renderStudy();
+});
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  if(studyOrder.length===0) return;
+  idx = (idx+1) % studyOrder.length;
+  flipped=false; renderStudy();
+});
+document.getElementById('prevBtn').addEventListener('click', ()=>{
+  if(studyOrder.length===0) return;
+  idx = (idx-1+studyOrder.length) % studyOrder.length;
+  flipped=false; renderStudy();
+});
+document.getElementById('shuffleBtn').addEventListener('click', ()=>{
+  for(let i=studyOrder.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [studyOrder[i],studyOrder[j]]=[studyOrder[j],studyOrder[i]];
+  }
+  idx=0; flipped=false; renderStudy();
+});
+
+function render(){ renderStudy(); renderList(); }
+loadCards();
+</script>
+</body>
+</html>
 
