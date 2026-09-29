@@ -62,6 +62,14 @@ button{
 .card-item .word{font-weight:700; font-size:1.05rem;}
 .card-item .sent{color:var(--sub); font-size:.85rem; margin-top:2px;}
 .del-btn{background:none; border:none; color:var(--danger); font-size:1.2rem; padding:4px 8px;}
+.speak-btn{
+  background:var(--accent); color:#fff; border:none; border-radius:50%;
+  width:34px; height:34px; min-width:34px; font-size:1rem; padding:0;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.speak-btn.small{width:28px; height:28px; font-size:.85rem;}
+.speak-btn:active{opacity:.8;}
+.word-row{display:flex; align-items:center; justify-content:center; gap:10px;}
 .empty{text-align:center; color:var(--sub); padding:40px 10px;}
 
 /* Study mode */
@@ -99,8 +107,12 @@ button{
     <div class="progress" id="progress"></div>
     <div class="flashcard-wrap">
       <div class="flashcard" id="flashcard">
-        <div class="word" id="fcWord"></div>
+        <div class="word-row">
+          <div class="word" id="fcWord"></div>
+          <button class="speak-btn" id="speakWordBtn" title="Kelimeyi dinle">🔊</button>
+        </div>
         <div class="sent" id="fcSent"></div>
+        <button class="speak-btn small" id="speakSentBtn" title="Cümleyi dinle">🔊</button>
         <div class="tr" id="fcTr" style="display:none;"></div>
         <div class="hint" id="fcHint">Çevirmek için dokun</div>
       </div>
@@ -190,6 +202,10 @@ function renderList(){
     const div = document.createElement('div');
     div.className='card-item';
     div.innerHTML = `<div class="info"><div class="word">${escapeHtml(c.word)}</div><div class="sent">${escapeHtml(c.sent)} — ${escapeHtml(c.tr)}</div></div>`;
+    const speakBtn = document.createElement('button');
+    speakBtn.className='speak-btn small'; speakBtn.textContent='🔊'; speakBtn.title='Kelimeyi dinle';
+    speakBtn.addEventListener('click', ()=>speak(c.word));
+    div.appendChild(speakBtn);
     const btn = document.createElement('button');
     btn.className='del-btn'; btn.textContent='✕';
     btn.addEventListener('click', ()=>{
@@ -202,6 +218,43 @@ function renderList(){
     div.appendChild(btn);
     area.appendChild(div);
   });
+}
+
+/* ---- Text-to-speech: US English, male voice preferred ---- */
+let cachedVoice = null;
+let voicesReady = false;
+function pickVoice(){
+  const voices = speechSynthesis.getVoices();
+  if(!voices || voices.length===0) return null;
+  const usVoices = voices.filter(v=>v.lang==='en-US' || v.lang==='en_US');
+  const pool = usVoices.length ? usVoices : voices.filter(v=>v.lang && v.lang.startsWith('en'));
+  const maleNames = ['male','man','aaron','fred','alex','daniel','david','guy','tom','eric','mark','james'];
+  const male = pool.find(v=>maleNames.some(n=>v.name.toLowerCase().includes(n)));
+  return male || pool[0] || voices[0];
+}
+function ensureVoices(){
+  return new Promise(resolve=>{
+    let v = speechSynthesis.getVoices();
+    if(v && v.length){ voicesReady=true; resolve(); return; }
+    speechSynthesis.onvoiceschanged = ()=>{ voicesReady=true; resolve(); };
+    setTimeout(resolve, 800);
+  });
+}
+async function speak(text){
+  if(!('speechSynthesis' in window)){
+    alert('Bu cihazda sesli okuma desteklenmiyor.');
+    return;
+  }
+  try{
+    speechSynthesis.cancel();
+    if(!voicesReady) await ensureVoices();
+    if(!cachedVoice) cachedVoice = pickVoice();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    if(cachedVoice) utter.voice = cachedVoice;
+    utter.rate = 0.92;
+    speechSynthesis.speak(utter);
+  }catch(e){}
 }
 
 function escapeHtml(s){
@@ -223,9 +276,20 @@ function renderStudy(){
   document.getElementById('fcHint').textContent = flipped ? 'Tekrar dokun' : 'Çevirmek için dokun';
 }
 
-document.getElementById('flashcard').addEventListener('click', ()=>{
+document.getElementById('flashcard').addEventListener('click', (e)=>{
+  if(e.target.closest('.speak-btn')) return;
   flipped = !flipped;
   renderStudy();
+});
+document.getElementById('speakWordBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const c = cards[studyOrder[idx]];
+  if(c) speak(c.word);
+});
+document.getElementById('speakSentBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  const c = cards[studyOrder[idx]];
+  if(c) speak(c.sent);
 });
 document.getElementById('nextBtn').addEventListener('click', ()=>{
   if(studyOrder.length===0) return;
@@ -250,4 +314,3 @@ loadCards();
 </script>
 </body>
 </html>
-
