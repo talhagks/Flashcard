@@ -252,7 +252,7 @@ async function speak(text){
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'en-US';
     if(cachedVoice) utter.voice = cachedVoice;
-    utter.rate = 0.92;
+    utter.rate = 0.7;
     speechSynthesis.speak(utter);
   }catch(e){}
 }
@@ -314,3 +314,5 @@ loadCards();
 </script>
 </body>
 </html>
+
+
